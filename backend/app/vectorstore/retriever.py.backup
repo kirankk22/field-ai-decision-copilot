@@ -1,0 +1,100 @@
+from typing import Any
+
+from app.vectorstore.chroma_store import ChromaStore
+
+
+class ScopedRetriever:
+    """
+    Performs metadata-scoped semantic retrieval.
+
+    Retrieval is restricted to the selected:
+
+    - client
+    - district
+
+    Asset-specific results receive additional ranking
+    priority but district-level documents are retained.
+    """
+
+    def __init__(self) -> None:
+        self.store = ChromaStore()
+
+    def search(
+        self,
+        query: str,
+        client: str | None = None,
+        district: str | None = None,
+        asset: str | None = None,
+        category: str | None = None,
+        top_k: int = 5,
+    ) -> list[dict[str, Any]]:
+
+        filters: dict[str, Any] = {}
+
+        # ---------------------------------------------
+        # CLIENT SCOPE
+        # ---------------------------------------------
+
+        if client:
+            filters["client"] = client
+
+        # ---------------------------------------------
+        # DISTRICT SCOPE
+        # ---------------------------------------------
+
+        if district:
+            filters["district"] = district
+
+        # ---------------------------------------------
+        # OPTIONAL CATEGORY SCOPE
+        # ---------------------------------------------
+
+        if category:
+            filters["category"] = category
+
+        # ---------------------------------------------
+        # VECTOR SEARCH
+        # ---------------------------------------------
+
+        results = self.store.search(
+            query=query,
+            top_k=top_k,
+            filters=filters if filters else None,
+        )
+
+        # ---------------------------------------------
+        # ASSET-AWARE RANKING
+        # ---------------------------------------------
+
+        if asset:
+
+            for result in results:
+
+                metadata = result.get(
+                    "metadata",
+                    {},
+                )
+
+                result_asset = metadata.get(
+                    "asset_id"
+                )
+
+                result["asset_match"] = (
+                    result_asset == asset
+                )
+
+            # Asset-specific results first.
+            results.sort(
+                key=lambda item: (
+                    not item.get(
+                        "asset_match",
+                        False
+                    ),
+                    item.get(
+                        "distance",
+                        float("inf")
+                    ),
+                )
+            )
+
+        return results
