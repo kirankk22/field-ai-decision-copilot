@@ -4,12 +4,9 @@ from app.vectorstore.indexer import (
     KnowledgeBaseIndexer,
 )
 
-from app.vectorstore.embeddings import (
-    EmbeddingService,
-)
 
 from app.vectorstore.chroma_store import (
-    ChromaVectorStore,
+    ChromaStore,
 )
 
 
@@ -99,14 +96,9 @@ def main():
     print("-" * 80)
 
 
-    embedding_service = (
-        EmbeddingService()
-    )
-
-
     vector_store = (
-        ChromaVectorStore(
-            persist_directory=(
+        ChromaStore(
+            persist_directory=str(
                 VECTOR_STORE_PATH
             )
         )
@@ -126,46 +118,14 @@ def main():
     )
 
 
-    query_embedding = (
-        embedding_service
-        .embed_query(query)
+    results = vector_store.search(
+        query=query,
+        top_k=5,
     )
 
 
-    results = (
-        vector_store.search(
-            query_embedding=query_embedding,
-            n_results=5,
-        )
-    )
-
-
-    documents = (
-        results.get(
-            "documents",
-            [[]],
-        )[0]
-    )
-
-
-    metadatas = (
-        results.get(
-            "metadatas",
-            [[]],
-        )[0]
-    )
-
-
-    distances = (
-        results.get(
-            "distances",
-            [[]],
-        )[0]
-    )
-
-
-    for index, document in enumerate(
-        documents
+    for index, result in enumerate(
+        results
     ):
 
         print()
@@ -177,51 +137,56 @@ def main():
             "-" * 40
         )
 
+        metadata = result.get(
+            "metadata",
+            {},
+        )
 
-        metadata = metadatas[index]
+        document = result.get(
+            "text",
+            "",
+        )
 
+        distance = result.get(
+            "distance",
+        )
 
         print(
             f"Document: "
             f"{metadata.get('document_name')}"
         )
 
-
         print(
             f"Category: "
             f"{metadata.get('category')}"
         )
-
 
         print(
             f"Section: "
             f"{metadata.get('section')}"
         )
 
-
         print(
             f"Client: "
             f"{metadata.get('client')}"
         )
-
 
         print(
             f"District: "
             f"{metadata.get('district')}"
         )
 
-
         print(
             f"Asset: "
             f"{metadata.get('asset_id')}"
         )
 
-
         print(
             f"Distance: "
-            f"{distances[index]:.4f}"
+            f"{distance:.4f}"
+            if distance is not None
+            else "Distance: N/A"
         )
-
 
         print()
         print(

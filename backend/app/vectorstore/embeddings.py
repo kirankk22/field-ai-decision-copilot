@@ -1,4 +1,6 @@
-from sentence_transformers import SentenceTransformer
+from chromadb.utils.embedding_functions import (
+    DefaultEmbeddingFunction,
+)
 
 
 class EmbeddingService:
@@ -10,10 +12,9 @@ class EmbeddingService:
 
         self.model_name = model_name
 
-        self.model = SentenceTransformer(
-            model_name
+        self.embedding_function = (
+            DefaultEmbeddingFunction()
         )
-
 
     def embed_documents(
         self,
@@ -23,25 +24,25 @@ class EmbeddingService:
         if not texts:
             return []
 
-
-        embeddings = self.model.encode(
-            texts,
-            normalize_embeddings=True,
+        embeddings = self.embedding_function(
+            texts
         )
 
-
-        return embeddings.tolist()
-
+        return [
+            [float(value) for value in embedding]
+            for embedding in embeddings
+        ]
 
     def embed_query(
         self,
         text: str,
     ) -> list[float]:
 
-        embedding = self.model.encode(
-            text,
-            normalize_embeddings=True,
+        embeddings = self.embedding_function(
+            [text]
         )
 
-
-        return embedding.tolist()
+        return [
+            float(value)
+            for value in embeddings[0]
+        ]
