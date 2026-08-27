@@ -1,15 +1,21 @@
 services:
 
+  # ============================================================
+  # Backend — FastAPI + RAG + LLM
+  # ============================================================
+
   - type: web
     name: field-ai-backend
     runtime: docker
     plan: free
+
     rootDir: backend
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+
     healthCheckPath: /health
 
     envVars:
+
       - key: APP_NAME
         value: Field AI Decision Copilot
 
@@ -28,13 +34,23 @@ services:
       - key: GROQ_API_KEY
         sync: false
 
+      # Automatically use the public Render URL
+      # of the frontend.
       - key: CORS_ORIGINS
-        sync: false
+        fromService:
+          type: web
+          name: field-ai-frontend
+          envVarKey: RENDER_EXTERNAL_URL
 
+
+  # ============================================================
+  # Frontend — React/Vite Static Site
+  # ============================================================
 
   - type: web
     name: field-ai-frontend
     runtime: static
+
     rootDir: frontend
 
     buildCommand: npm ci && npm run build
@@ -46,5 +62,11 @@ services:
         destination: /index.html
 
     envVars:
+
+      # Automatically use the public Render URL
+      # of the backend.
       - key: VITE_API_BASE_URL
-        sync: false
+        fromService:
+          type: web
+          name: field-ai-backend
+          envVarKey: RENDER_EXTERNAL_URL
